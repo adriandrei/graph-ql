@@ -7,6 +7,12 @@ using System.Diagnostics;
 
 namespace Api.GraphQL;
 
+public class UserInnerDto
+{
+    public DateTimeOffset UpdatedAt { get; set; }
+    public string Name { get; set; }
+}
+
 public class UserDto
 {
     public string Name { get; set; }
@@ -16,6 +22,13 @@ public class UserMap : Profile
 {
     public UserMap()
     {
+        CreateMap<User, UserInnerDto>()
+            .ForMember(t => t.Name, p => p.MapFrom(src => src.Name))
+            .ForMember(t => t.UpdatedAt, p => p.MapFrom(src => src.UpdatedAt));
+
+        CreateMap<UserInnerDto, UserDto>()
+            .ForMember(t => t.Name, p => p.MapFrom(src => src.Name));
+
         CreateMap<User, UserDto>()
             .ForMember(t => t.Name, p => p.MapFrom(src => src.Name));
     }
@@ -27,21 +40,15 @@ public class Query
     [UseProjection]
     [UseFiltering]
     [UseSorting]
-    public IQueryable<User> UsersAsQueryable(
-        [Service] ApiDbContext dbContext) => dbContext.Users.AsQueryable();
-
-
-    [UsePaging]
-    [UseProjection]
-    [UseFiltering]
-    [UseSorting]
     public IQueryable<UserDto> UsersByName(
-        string key,
         [Service] ApiDbContext dbContext,
         [Service] IMapper mapper)
     {
         var sw = Stopwatch.StartNew();
-        var result = dbContext.Users.Where(t => t.Name.Contains(key)).AsQueryable().ProjectTo<UserDto>(mapper.ConfigurationProvider);
+        var result = dbContext.Users
+            .AsQueryable()
+            .ProjectTo<UserInnerDto>(mapper.ConfigurationProvider)
+            .ProjectTo<UserDto>(mapper.ConfigurationProvider);
         Console.WriteLine($"{nameof(UsersByName)}: {sw.ElapsedMilliseconds}");
 
         return result;
@@ -51,16 +58,17 @@ public class Query
     [UseProjection]
     [UseFiltering]
     [UseSorting]
-    public async Task<List<User>> UsersByName2(
-        string key,
-        [Service] ApiDbContext dbContext)
+    public IQueryable<UserDto> UsersByNameGood(
+    [Service] ApiDbContext dbContext,
+    [Service] IMapper mapper)
     {
         var sw = Stopwatch.StartNew();
-        var result = await dbContext.Users.Where(t => t.Name.Contains(key)).ToListAsync();
-        Console.WriteLine($"{nameof(UsersByName2)}: {sw.ElapsedMilliseconds}");
+        var result = dbContext.Users
+            .AsQueryable()
+            .ProjectTo<UserDto>(mapper.ConfigurationProvider);
+        Console.WriteLine($"{nameof(UsersByName)}: {sw.ElapsedMilliseconds}");
 
         return result;
-        
     }
 }
 
