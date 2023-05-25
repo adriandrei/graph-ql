@@ -1,9 +1,25 @@
 using Api.GraphQL.Data;
 using Api.GraphQL.Data.Entities;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace Api.GraphQL;
+
+public class UserDto
+{
+    public string Name { get; set; }
+}
+
+public class UserMap : Profile
+{
+    public UserMap()
+    {
+        CreateMap<User, UserDto>()
+            .ForMember(t => t.Name, p => p.MapFrom(src => src.Name));
+    }
+}
 
 public class Query
 {
@@ -19,12 +35,13 @@ public class Query
     [UseProjection]
     [UseFiltering]
     [UseSorting]
-    public IQueryable<User> UsersByName(
+    public IQueryable<UserDto> UsersByName(
         string key,
-        [Service] ApiDbContext dbContext)
+        [Service] ApiDbContext dbContext,
+        [Service] IMapper mapper)
     {
         var sw = Stopwatch.StartNew();
-        var result = dbContext.Users.Where(t => t.Name.Contains(key)).AsQueryable();
+        var result = dbContext.Users.Where(t => t.Name.Contains(key)).AsQueryable().ProjectTo<UserDto>(mapper.ConfigurationProvider);
         Console.WriteLine($"{nameof(UsersByName)}: {sw.ElapsedMilliseconds}");
 
         return result;
@@ -63,6 +80,8 @@ public class Program
             .AddFiltering()
             .AddSorting()
             .AddProjections();
+
+        builder.Services.AddAutoMapper(typeof(Program));
 
         builder.Services.AddAuthorization();
 
