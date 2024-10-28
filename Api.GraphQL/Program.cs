@@ -7,7 +7,7 @@ namespace Api.GraphQL;
 
 public class Query
 {
-    [UsePaging]
+    [UsePaging(IncludeTotalCount = true)]
     [UseProjection]
     [UseFiltering]
     [UseSorting]
@@ -15,7 +15,7 @@ public class Query
         [Service] ApiDbContext dbContext) => dbContext.Users.AsQueryable();
 
 
-    [UsePaging]
+    [UsePaging(IncludeTotalCount = true)]
     [UseProjection]
     [UseFiltering]
     [UseSorting]
@@ -30,7 +30,7 @@ public class Query
         return result;
     }
 
-    [UsePaging]
+    [UsePaging(IncludeTotalCount = true)]
     [UseProjection]
     [UseFiltering]
     [UseSorting]
