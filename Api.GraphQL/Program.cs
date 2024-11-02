@@ -1,51 +1,9 @@
 using Api.GraphQL.Data;
 using Api.GraphQL.Data.Entities;
+using Api.GraphQL.Types;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace Api.GraphQL;
-
-public class Query
-{
-    [UsePaging(IncludeTotalCount = true)]
-    [UseProjection]
-    [UseFiltering]
-    [UseSorting]
-    public IQueryable<User> UsersAsQueryable(
-        [Service] ApiDbContext dbContext) => dbContext.Users.AsQueryable();
-
-
-    [UsePaging(IncludeTotalCount = true)]
-    [UseProjection]
-    [UseFiltering]
-    [UseSorting]
-    public IQueryable<User> UsersByName(
-        string key,
-        [Service] ApiDbContext dbContext)
-    {
-        var sw = Stopwatch.StartNew();
-        var result = dbContext.Users.Where(t => t.Name.Contains(key)).AsQueryable();
-        Console.WriteLine($"{nameof(UsersByName)}: {sw.ElapsedMilliseconds}");
-
-        return result;
-    }
-
-    [UsePaging(IncludeTotalCount = true)]
-    [UseProjection]
-    [UseFiltering]
-    [UseSorting]
-    public async Task<List<User>> UsersByName2(
-        string key,
-        [Service] ApiDbContext dbContext)
-    {
-        var sw = Stopwatch.StartNew();
-        var result = await dbContext.Users.Where(t => t.Name.Contains(key)).ToListAsync();
-        Console.WriteLine($"{nameof(UsersByName2)}: {sw.ElapsedMilliseconds}");
-
-        return result;
-        
-    }
-}
 
 public class Program
 {
@@ -56,8 +14,11 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddDbContext<ApiDbContext>(
-            options => options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=graph-ql;Trusted_Connection=True;MultipleActiveResultSets=true"),
-            ServiceLifetime.Transient);
+            options => options
+                .UseSqlServer(
+                    "Server=(localdb)\\mssqllocaldb;Database=graph-ql-database;Trusted_Connection=True;MultipleActiveResultSets=true")
+                .EnableSensitiveDataLogging()
+                .EnableDetailedErrors());
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
             .AddFiltering()
@@ -65,45 +26,46 @@ public class Program
             .AddProjections();
 
         builder.Services.AddAuthorization();
+        builder.Services.AddAutoMapper(typeof(Program));
 
+        builder.Services.AddLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.AddConsole();
+            builder.AddDebug();
+        });
 
         var app = builder.Build();
 
         var scope = app.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
-        var dbContext = scope.ServiceProvider.GetService<ApiDbContext>();
-        dbContext!.Database.Migrate();
+        var dbContext = scope.ServiceProvider.GetService<ApiDbContext>()!;
+        dbContext.Database.Migrate();
 
-        AddUsers(dbContext);
-        AddPosts(dbContext);
+        SeedData(dbContext);
         app.MapGraphQL();
         app.UseHttpsRedirection();
         app.UseAuthorization();
         app.Run();
     }
 
-    private static void AddUsers(ApiDbContext dbContext)
+    private static void SeedData(ApiDbContext dbContext)
     {
-        for(int j = 0; j < NumberOfAdds; j++)
+        var user = dbContext.Users.FirstOrDefault();
+        if (user != null) return;
+
+        for (var j = 0; j < NumberOfAdds; j++)
         {
             var toAdd = new List<User>();
-            for (int i = 0; i < EntitiesToAdd; i++)
-            {
-                toAdd.Add(new User(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, $"{i}{i}"));
-            }
+            for (var i = 0; i < EntitiesToAdd; i++)
+                toAdd.Add(
+                    new User(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, $"{i}{j}",
+                    [
+                        new Post(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, $"Post {i}{j}"),
+                        new Post(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, $"Post {i}{j}"),
+                        new Post(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, $"Post {i}{j}")
+                    ]));
+
             dbContext.Users.AddRange(toAdd);
-            dbContext.SaveChanges();
-        }
-    }
-    private static void AddPosts(ApiDbContext dbContext)
-    {
-        for (int j = 0; j < NumberOfAdds; j++)
-        {
-            var toAdd = new List<Post>();
-            for (int i = 0; i < EntitiesToAdd; i++)
-            {
-                toAdd.Add(new Post(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, $"{i}{i}"));
-            }
-            dbContext.Posts.AddRange(toAdd);
             dbContext.SaveChanges();
         }
     }
