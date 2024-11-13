@@ -11,12 +11,19 @@
       startCursor
       endCursor
     }
-    nodes {
-      id
-      name
-      posts {
+    edges{
+      cursor
+      node{
         id
-        text
+        name
+        posts{
+          id
+          text
+        }
+        postsWithDataLoader{
+          id
+          text
+        }
       }
     }
   }
