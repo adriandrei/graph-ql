@@ -1,4 +1,7 @@
-﻿namespace Api.GraphQL.Models;
+﻿using Api.GraphQL.Types;
+using HotChocolate.Resolvers;
+
+namespace Api.GraphQL.Models;
 
 public class UserModel
 {

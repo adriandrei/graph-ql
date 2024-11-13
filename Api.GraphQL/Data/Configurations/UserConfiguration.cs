@@ -10,6 +10,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.HasKey(t => t.Id);
         builder.HasMany(t => t.Posts)
-            .WithOne();
+            .WithOne()
+            .HasForeignKey(t => t.UserId);
     }
 }

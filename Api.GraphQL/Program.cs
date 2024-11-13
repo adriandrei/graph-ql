@@ -21,6 +21,9 @@ public class Program
                 .EnableDetailedErrors());
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
+            .AddType<QueryTypeExtensions>()
+            .AddDataLoader<PostsByUsersDataLoader>()
+            .AddTypeExtension<UserTypeExtensions>()
             .AddFiltering()
             .AddSorting()
             .AddProjections();
