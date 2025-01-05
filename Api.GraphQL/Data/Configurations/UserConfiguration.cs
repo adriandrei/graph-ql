@@ -9,6 +9,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.HasKey(t => t.Id);
+        builder.HasIndex(t => t.Name).IsClustered(false);
         builder.HasMany(t => t.Posts)
             .WithOne()
             .HasForeignKey(t => t.UserId);

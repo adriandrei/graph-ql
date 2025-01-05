@@ -7,8 +7,8 @@ namespace Api.GraphQL;
 
 public class Program
 {
-    private const int EntitiesToAdd = 10;
-    private const int NumberOfAdds = 10;
+    private const int EntitiesToAdd = 0;
+    private const int NumberOfAdds = 0;
 
     public static void Main(string[] args)
     {
@@ -28,6 +28,15 @@ public class Program
             .AddSorting()
             .AddProjections();
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy.AllowAnyOrigin() // Allow requests from any origin
+                      .AllowAnyHeader() // Allow any headers
+                      .AllowAnyMethod(); // Allow any HTTP methods (GET, POST, etc.)
+            });
+        });
         builder.Services.AddAuthorization();
         builder.Services.AddAutoMapper(typeof(Program));
 
@@ -44,7 +53,8 @@ public class Program
         var dbContext = scope.ServiceProvider.GetService<ApiDbContext>()!;
         dbContext.Database.Migrate();
 
-        SeedData(dbContext);
+        Task.Run(() => SeedData(dbContext));
+        app.UseCors("AllowAll"); // Apply the CORS policy
         app.MapGraphQL();
         app.UseHttpsRedirection();
         app.UseAuthorization();
@@ -53,9 +63,6 @@ public class Program
 
     private static void SeedData(ApiDbContext dbContext)
     {
-        var user = dbContext.Users.FirstOrDefault();
-        if (user != null) return;
-
         for (var j = 0; j < NumberOfAdds; j++)
         {
             var toAdd = new List<User>();
